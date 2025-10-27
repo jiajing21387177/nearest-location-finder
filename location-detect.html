@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nearest Restaurant Finder</title>
+    
+    <!-- Leaflet.js CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+     crossorigin=""/>
+    
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Leaflet.js JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+     crossorigin=""></script>
+     
+    <style>
+        /* Custom styles for Inter font */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Ensure map displays correctly */
+        #map {
+            height: 800px;
+            border-radius: 0.5rem; /* 8px */
+            border: 1px solid #e5e7eb; /* gray-200 */
+        }
+    </style>
+    
+    <!-- Preconnect for Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- Load Inter font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+
+    <!-- Main View Card -->
+    <div id="mainView" class="bg-white w-full max-w-md p-6 sm:p-8 rounded-xl shadow-lg text-center">
+        
+        <!-- Header -->
+        <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">Find Our Nearest Restaurant</h1>
+        <p class="text-gray-600 mb-6">Use your device's location or pin your location on a map.</p>
+
+        <!-- Find Button (Auto-location) -->
+        <button id="findNearestButton" class="w-full bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition duration-300 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed">
+            <span id="buttonText">Find Using My Location</span>
+            <!-- Loading Spinner -->
+            <svg id="loadingSpinner" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white hidden inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+        </button>
+
+        <!-- Pin Location Button -->
+        <button id="pinLocationButton" class="w-full mt-3 bg-gray-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-75 transition duration-300 ease-in-out">
+            Pin Location on Map
+        </button>
+
+        <!-- Status Message Area -->
+        <p id="statusMessage" class="text-gray-500 mt-4 h-5"></p>
+
+        <!-- Result Card (hidden by default) -->
+        <div id="resultCard" class="hidden bg-gray-50 border border-gray-200 rounded-lg p-4 mt-6 text-left">
+            <h2 class="text-lg font-semibold text-gray-800 mb-2">We found a restaurant near you:</h2>
+            <p class="text-xl font-bold text-blue-700" id="restaurantName"></p>
+            <p class="text-gray-600" id="restaurantDistance"></p>
+        </div>
+    </div>
+
+    <!-- Map View Card (hidden by default) -->
+    <div id="mapView" class="hidden bg-white w-full max-w-4xl p-6 sm:p-8 rounded-xl shadow-lg">
+        <h2 class="text-xl font-bold text-gray-800 mb-4 text-center">Pin Your Location</h2>
+        <p id="mapStatus" class="text-center text-gray-600 mb-4">Click on the map to place a pin.</p>
+        
+        <!-- Map Container -->
+        <div id="map" class="w-full"></div>
+
+        <!-- Map Controls -->
+        <div class="mt-4 flex flex-col sm:flex-row gap-3">
+            <button id="confirmPinButton" class_disabled="w-full sm:w-1/2 bg-blue-300 text-white font-semibold py-3 px-6 rounded-lg cursor-not-allowed" class="w-full sm:w-1/2 bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition duration-300 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                Confirm Location
+            </button>
+            <button id="cancelPinButton" class="w-full sm:w-1/2 bg-gray-200 text-gray-700 font-semibold py-3 px-6 rounded-lg hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-75 transition duration-300 ease-in-out">
+                Cancel
+            </button>
+        </div>
+    </div>
+
+
+    <script>
+        // --- Restaurant Data ---
+        const restaurantLocations = [
+            { name: "My Restaurant - KLCC", latitude: 3.1578, longitude: 101.7119 },
+            { name: "My Restaurant - Pavilion", latitude: 3.1489, longitude: 101.7136 },
+            { name: "My Restaurant - Mid Valley", latitude: 3.1186, longitude: 101.6778 },
+            { name: "My Restaurant - Sunway Pyramid", latitude: 3.0726, longitude: 101.6084 },
+            { name: "My Restaurant - 1 Utama", latitude: 3.1477, longitude: 101.6163 }
+        ];
+
+        // --- DOM Elements ---
+        const mainView = document.getElementById('mainView');
+        const findButton = document.getElementById('findNearestButton');
+        const buttonText = document.getElementById('buttonText');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const statusMessage = document.getElementById('statusMessage');
+        const resultCard = document.getElementById('resultCard');
+        const restaurantName = document.getElementById('restaurantName');
+        const restaurantDistance = document.getElementById('restaurantDistance');
+
+        const pinLocationButton = document.getElementById('pinLocationButton');
+        const mapView = document.getElementById('mapView');
+        const mapStatus = document.getElementById('mapStatus');
+        const confirmPinButton = document.getElementById('confirmPinButton');
+        const cancelPinButton = document.getElementById('cancelPinButton');
+
+        // --- Map Variables ---
+        let map;
+        let marker;
+        let pinnedLocation;
+        // Default center for the map (Kuala Lumpur)
+        const mapCenter = [3.1390, 101.6869]; 
+
+        // --- Event Listeners ---
+        findButton.addEventListener('click', findNearestRestaurant);
+        pinLocationButton.addEventListener('click', showMapView);
+        // BUGFIX: Pass true to clear results only on "Cancel"
+        cancelPinButton.addEventListener('click', () => showMainView(true));
+        confirmPinButton.addEventListener('click', confirmPin);
+
+
+        // --- Main Function (Geolocation) ---
+        function findNearestRestaurant() {
+            if (!navigator.geolocation) {
+                statusMessage.textContent = "Geolocation is not supported by your browser.";
+                statusMessage.className = "text-red-500 mt-4 h-5";
+                return;
+            }
+            setLoadingState(true);
+            resultCard.classList.add('hidden');
+            navigator.geolocation.getCurrentPosition(geolocationSuccess, geolocationError);
+        }
+
+        // --- Geolocation Callbacks ---
+        function geolocationSuccess(position) {
+            findNearestFromCoords(position.coords.latitude, position.coords.longitude);
+            setLoadingState(false);
+        }
+
+        function geolocationError(error) {
+            // ... (error handling logic remains the same)
+            let message = "";
+            switch (error.code) {
+                case error.PERMISSION_DENIED:
+                    message = "Please allow location access to find the nearest restaurant.";
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    message = "Location information is unavailable.";
+                    break;
+                case error.TIMEOUT:
+                    message = "The request to get user location timed out.";
+                    break;
+                default:
+                    message = "An unknown error occurred.";
+                    break;
+            }
+            statusMessage.textContent = message;
+            statusMessage.className = "text-red-500 mt-4 h-5";
+            setLoadingState(false);
+        }
+        
+        // --- Core Logic: Find Nearest ---
+        function findNearestFromCoords(userLat, userLon) {
+            let nearestRestaurant = null;
+            let minDistance = Infinity;
+
+            restaurantLocations.forEach(restaurant => {
+                const distance = calculateDistance(
+                    userLat,
+                    userLon,
+                    restaurant.latitude,
+                    restaurant.longitude
+                );
+
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    nearestRestaurant = restaurant;
+                }
+            });
+
+            if (nearestRestaurant) {
+                restaurantName.textContent = nearestRestaurant.name;
+                restaurantDistance.textContent = `Approximately ${minDistance.toFixed(2)} km away.`;
+                resultCard.classList.remove('hidden');
+                statusMessage.textContent = "";
+            } else {
+                statusMessage.textContent = "Could not find any restaurants.";
+                statusMessage.className = "text-red-500 mt-4 h-5";
+            }
+        }
+
+
+        // --- Map View Functions ---
+        function showMapView() {
+            mainView.classList.add('hidden');
+            mapView.classList.remove('hidden');
+            initializeMap();
+        }
+
+        // BUGFIX: Added 'clearResults' parameter. Defaults to false.
+        function showMainView(clearResults = false) {
+            mapView.classList.add('hidden');
+            mainView.classList.remove('hidden');
+            
+            if (clearResults) {
+                // Clear old results and statuses only if 'true' is passed (e.g., on Cancel)
+                resultCard.classList.add('hidden');
+                statusMessage.textContent = "";
+            }
+        }
+
+        function initializeMap() {
+            // Only initialize the map once
+            if (!map) {
+                map = L.map('map').setView(mapCenter, 11); // Centered on KL, zoom level 11
+
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                    attribution: '© <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                }).addTo(map);
+
+                // Add click listener to the map
+                map.on('click', function(e) {
+                    pinnedLocation = e.latlng;
+                    
+                    if (!marker) {
+                        // Create marker if it doesn't exist
+                        marker = L.marker(pinnedLocation).addTo(map);
+                    } else {
+                        // Move existing marker
+                        marker.setLatLng(pinnedLocation);
+                    }
+                    
+                    mapStatus.textContent = "Location pinned! Click 'Confirm' to search.";
+                    mapStatus.className = "text-center text-blue-600 mb-4 font-semibold";
+                    confirmPinButton.disabled = false;
+                });
+            }
+            // Reset map state when view is shown
+            if (marker) {
+                marker.remove();
+                marker = null;
+            }
+            pinnedLocation = null;
+            map.setView(mapCenter, 11);
+            mapStatus.textContent = "Click on the map to place a pin.";
+            mapStatus.className = "text-center text-gray-600 mb-4";
+            confirmPinButton.disabled = true;
+            
+            // Invalidate map size to fix potential rendering issues
+            setTimeout(() => map.invalidateSize(), 0);
+        }
+
+        function confirmPin() {
+            if (pinnedLocation) {
+                findNearestFromCoords(pinnedLocation.lat, pinnedLocation.lng);
+                // BUGFIX: This now calls showMainView() which defaults to showMainView(false), 
+                // so results are not cleared.
+                showMainView();
+            }
+        }
+
+
+        // --- Helper Functions ---
+        function setLoadingState(isLoading) {
+            findButton.disabled = isLoading;
+            pinLocationButton.disabled = isLoading; // Disable pin button too
+            if (isLoading) {
+                buttonText.textContent = "Locating...";
+                loadingSpinner.classList.remove('hidden');
+            } else {
+                buttonText.textContent = "Find Using My Location";
+                loadingSpinner.classList.add('hidden');
+                pinLocationButton.disabled = false;
+            }
+        }
+
+        /**
+         * Calculates the distance between two lat/lon points in kilometers
+         * using the Haversine formula.
+         */
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            // ... (calculation logic remains the same)
+            const R = 6371; // Radius of the Earth in km
+            const dLat = deg2rad(lat2 - lat1);
+            const dLon = deg2rad(lon2 - lon1);
+
+            const a =
+                Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2);
+
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            const d = R * c; // Distance in km
+            return d;
+        }
+
+        /**
+         * Converts degrees to radians.
+         */
+        function deg2rad(deg) {
+            // ... (conversion logic remains the same)
+            return deg * (Math.PI / 180);
+        }
+
+    </script>
+</body>
+</html>
+
