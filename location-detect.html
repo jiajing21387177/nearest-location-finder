@@ -1,63 +1,76 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nearest Restaurant Finder</title>
-    
+
     <!-- Leaflet.js CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-     crossorigin=""/>
-    
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+
     <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
+
     <!-- Leaflet.js JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-     crossorigin=""></script>
-     
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
     <style>
         /* Custom styles for Inter font */
         body {
             font-family: 'Inter', sans-serif;
         }
+
         /* Ensure map displays correctly */
         #map {
             height: 800px;
-            border-radius: 0.5rem; /* 8px */
-            border: 1px solid #e5e7eb; /* gray-200 */
+            border-radius: 0.5rem;
+            /* 8px */
+            border: 1px solid #e5e7eb;
+            /* gray-200 */
         }
     </style>
-    
+
     <!-- Preconnect for Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <!-- Load Inter font -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        @view-transition {
+            navigation: auto;
+        }
+    </style>
 </head>
+
 <body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
 
     <!-- Main View Card -->
     <div id="mainView" class="bg-white w-full max-w-md p-6 sm:p-8 rounded-xl shadow-lg text-center">
-        
+
         <!-- Header -->
         <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">Find Our Nearest Restaurant</h1>
         <p class="text-gray-600 mb-6">Use your device's location or pin your location on a map.</p>
 
         <!-- Find Button (Auto-location) -->
-        <button id="findNearestButton" class="w-full bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition duration-300 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed">
+        <button id="findNearestButton"
+            class="w-full bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition duration-300 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed">
             <span id="buttonText">Find Using My Location</span>
             <!-- Loading Spinner -->
-            <svg id="loadingSpinner" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white hidden inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <svg id="loadingSpinner" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white hidden inline-block"
+                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                <path class="opacity-75" fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                </path>
             </svg>
         </button>
 
         <!-- Pin Location Button -->
-        <button id="pinLocationButton" class="w-full mt-3 bg-gray-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-75 transition duration-300 ease-in-out">
+        <button id="pinLocationButton"
+            class="w-full mt-3 bg-gray-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-75 transition duration-300 ease-in-out">
             Pin Location on Map
         </button>
 
@@ -76,16 +89,20 @@
     <div id="mapView" class="hidden bg-white w-full max-w-4xl p-6 sm:p-8 rounded-xl shadow-lg">
         <h2 class="text-xl font-bold text-gray-800 mb-4 text-center">Pin Your Location</h2>
         <p id="mapStatus" class="text-center text-gray-600 mb-4">Click on the map to place a pin.</p>
-        
+
         <!-- Map Container -->
         <div id="map" class="w-full"></div>
 
         <!-- Map Controls -->
         <div class="mt-4 flex flex-col sm:flex-row gap-3">
-            <button id="confirmPinButton" class_disabled="w-full sm:w-1/2 bg-blue-300 text-white font-semibold py-3 px-6 rounded-lg cursor-not-allowed" class="w-full sm:w-1/2 bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition duration-300 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+            <button id="confirmPinButton"
+                class_disabled="w-full sm:w-1/2 bg-blue-300 text-white font-semibold py-3 px-6 rounded-lg cursor-not-allowed"
+                class="w-full sm:w-1/2 bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition duration-300 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled>
                 Confirm Location
             </button>
-            <button id="cancelPinButton" class="w-full sm:w-1/2 bg-gray-200 text-gray-700 font-semibold py-3 px-6 rounded-lg hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-75 transition duration-300 ease-in-out">
+            <button id="cancelPinButton"
+                class="w-full sm:w-1/2 bg-gray-200 text-gray-700 font-semibold py-3 px-6 rounded-lg hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-75 transition duration-300 ease-in-out">
                 Cancel
             </button>
         </div>
@@ -123,7 +140,7 @@
         let marker;
         let pinnedLocation;
         // Default center for the map (Kuala Lumpur)
-        const mapCenter = [3.1390, 101.6869]; 
+        const mapCenter = [3.1390, 101.6869];
 
         // --- Event Listeners ---
         findButton.addEventListener('click', findNearestRestaurant);
@@ -172,7 +189,7 @@
             statusMessage.className = "text-red-500 mt-4 h-5";
             setLoadingState(false);
         }
-        
+
         // --- Core Logic: Find Nearest ---
         function findNearestFromCoords(userLat, userLon) {
             let nearestRestaurant = null;
@@ -215,7 +232,7 @@
         function showMainView(clearResults = false) {
             mapView.classList.add('hidden');
             mainView.classList.remove('hidden');
-            
+
             if (clearResults) {
                 // Clear old results and statuses only if 'true' is passed (e.g., on Cancel)
                 resultCard.classList.add('hidden');
@@ -234,9 +251,9 @@
                 }).addTo(map);
 
                 // Add click listener to the map
-                map.on('click', function(e) {
+                map.on('click', function (e) {
                     pinnedLocation = e.latlng;
-                    
+
                     if (!marker) {
                         // Create marker if it doesn't exist
                         marker = L.marker(pinnedLocation).addTo(map);
@@ -244,7 +261,7 @@
                         // Move existing marker
                         marker.setLatLng(pinnedLocation);
                     }
-                    
+
                     mapStatus.textContent = "Location pinned! Click 'Confirm' to search.";
                     mapStatus.className = "text-center text-blue-600 mb-4 font-semibold";
                     confirmPinButton.disabled = false;
@@ -260,7 +277,7 @@
             mapStatus.textContent = "Click on the map to place a pin.";
             mapStatus.className = "text-center text-gray-600 mb-4";
             confirmPinButton.disabled = true;
-            
+
             // Invalidate map size to fix potential rendering issues
             setTimeout(() => map.invalidateSize(), 0);
         }
@@ -319,5 +336,5 @@
 
     </script>
 </body>
-</html>
 
+</html>
