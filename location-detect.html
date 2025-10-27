@@ -18,9 +18,6 @@
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
     <style>
-        @view-transition {
-            navigation: auto;
-        }
         /* Custom styles for Inter font */
         body {
             font-family: 'Inter', sans-serif;
@@ -43,7 +40,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 
-<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+<!-- MODIFIED: Changed flex to flex-col and added space-y-4 for vertical stacking -->
+
+<body class="bg-gray-100 min-h-screen flex flex-col items-center p-4 space-y-4">
 
     <!-- Main View Card -->
     <div id="mainView" class="bg-white w-full max-w-md p-6 sm:p-8 rounded-xl shadow-lg text-center">
@@ -106,6 +105,15 @@
         </div>
     </div>
 
+    <!-- All Locations Section -->
+    <!-- MODIFIED: Removed 'hidden' and 'mt-4' classes -->
+    <section id="allLocationsSection" class="bg-white w-full max-w-4xl p-6 sm:p-8 rounded-xl shadow-lg">
+        <h2 class="text-xl font-bold text-gray-800 mb-4 text-center">All Locations</h2>
+        <ul id="allLocationsList" class="space-y-3">
+            <!-- Location items will be injected here by script -->
+        </ul>
+    </section>
+
 
     <script>
         // --- Restaurant Data ---
@@ -141,6 +149,8 @@
         const mapStatus = document.getElementById('mapStatus');
         const confirmPinButton = document.getElementById('confirmPinButton');
         const cancelPinButton = document.getElementById('cancelPinButton');
+        const allLocationsSection = document.getElementById('allLocationsSection');
+        const allLocationsList = document.getElementById('allLocationsList');
 
         // --- Map Variables ---
         let map;
@@ -171,7 +181,10 @@
 
         // --- Geolocation Callbacks ---
         function geolocationSuccess(position) {
-            findNearestFromCoords(position.coords.latitude, position.coords.longitude);
+            const userLat = position.coords.latitude;
+            const userLon = position.coords.longitude;
+            findNearestFromCoords(userLat, userLon);
+            displayAllLocations(userLat, userLon); // ADDED: Update all locations list
             setLoadingState(false);
         }
 
@@ -231,6 +244,7 @@
         // --- Map View Functions ---
         function showMapView() {
             mainView.classList.add('hidden');
+            allLocationsSection.classList.add('hidden'); // Hide locations list in map view
             mapView.classList.remove('hidden');
             initializeMap();
         }
@@ -239,11 +253,14 @@
         function showMainView(clearResults = false) {
             mapView.classList.add('hidden');
             mainView.classList.remove('hidden');
+            allLocationsSection.classList.remove('hidden'); // Show locations list again
 
             if (clearResults) {
                 // Clear old results and statuses only if 'true' is passed (e.g., on Cancel)
                 resultCard.classList.add('hidden');
                 statusMessage.textContent = "";
+                // Repopulate initial list if results are cleared
+                populateInitialLocationList();
             }
         }
 
@@ -291,7 +308,10 @@
 
         function confirmPin() {
             if (pinnedLocation) {
-                findNearestFromCoords(pinnedLocation.lat, pinnedLocation.lng);
+                const userLat = pinnedLocation.lat;
+                const userLon = pinnedLocation.lng;
+                findNearestFromCoords(userLat, userLon);
+                displayAllLocations(userLat, userLon);
                 // BUGFIX: This now calls showMainView() which defaults to showMainView(false), 
                 // so results are not cleared.
                 showMainView();
@@ -340,6 +360,60 @@
             // ... (conversion logic remains the same)
             return deg * (Math.PI / 180);
         }
+
+        // --- New Function: Populate Initial Location List ---
+        function populateInitialLocationList() {
+            allLocationsList.innerHTML = ''; // Clear list
+
+            restaurantLocations.forEach(location => {
+                const listItem = document.createElement('li');
+                listItem.className = 'text-sm flex justify-between items-center p-2 rounded-md even:bg-gray-50';
+                listItem.innerHTML = `
+                <div>
+                    <span class="font-semibold text-gray-700">${location.name}</span>
+                    <span class="text-gray-500 ml-2 text-xs">(${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)})</span>
+                </div>
+                <span class="text-gray-400 font-medium">-- km away</span>
+            `;
+                allLocationsList.appendChild(listItem);
+            });
+        }
+
+        // --- New Function: Display All Locations ---
+        function displayAllLocations(userLat, userLon) {
+            allLocationsList.innerHTML = ''; // Clear previous list
+
+            // Create a sorted list of locations by distance
+            const sortedLocations = restaurantLocations
+                .map(location => {
+                    const distance = calculateDistance(
+                        userLat,
+                        userLon,
+                        location.latitude,
+                        location.longitude
+                    );
+                    return { ...location, distance }; // Return new object with distance
+                })
+                .sort((a, b) => a.distance - b.distance); // Sort by distance ascending
+
+            sortedLocations.forEach(location => {
+                const listItem = document.createElement('li');
+                listItem.className = 'text-sm flex justify-between items-center p-2 rounded-md even:bg-gray-50';
+                listItem.innerHTML = `
+                <div>
+                    <span class="font-semibold text-gray-700">${location.name}</span>
+                    <span class="text-gray-500 ml-2 text-xs">(${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)})</span>
+                </div>
+                <span class="text-blue-600 font-medium">${location.distance.toFixed(2)} km away</span>
+            `;
+                allLocationsList.appendChild(listItem);
+            });
+
+            allLocationsSection.classList.remove('hidden'); // Ensure it's visible
+        }
+
+        // --- Initialize Page ---
+        document.addEventListener('DOMContentLoaded', populateInitialLocationList);
 
     </script>
 </body>

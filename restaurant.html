@@ -17,10 +17,6 @@
 
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @view-transition {
-            navigation: auto;
-        }
-
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f3f4f6;
@@ -124,6 +120,16 @@
         </aside>
     </main>
 
+    <!-- All Locations Section -->
+    <section id="allLocationsSection" class="hidden container mx-auto p-4 md:p-6 lg:p-8">
+        <div class="bg-white p-6 rounded-lg shadow-md">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Our Locations</h2>
+            <ul id="allLocationsList" class="space-y-3">
+                <!-- Location items will be injected here -->
+            </ul>
+        </div>
+    </section>
+
     <!-- Location Selection Modal Removed -->
 
     <!-- Map Pinning Modal Removed -->
@@ -191,6 +197,9 @@
         const emptyCartMessage = document.getElementById('emptyCartMessage');
         const submitOrderButton = document.getElementById('submitOrderButton');
         const searchInput = document.getElementById('searchInput');
+        const allLocationsSection = document.getElementById('allLocationsSection');
+        const allLocationsList = document.getElementById('allLocationsList');
+
 
         // Location & Modals
         // const locationButton = document.getElementById('locationButton'); // Removed
@@ -337,6 +346,31 @@
             renderProducts(filtered);
         }
 
+        // --- New Function: Display All Locations ---
+        function displayAllLocations(userLat, userLon) {
+            allLocationsList.innerHTML = ''; // Clear previous list
+
+            restaurantLocations.forEach(location => {
+                const distance = haversineDistance(
+                    { latitude: userLat, longitude: userLon },
+                    { latitude: location.latitude, longitude: location.longitude }
+                );
+
+                const listItem = document.createElement('li');
+                listItem.className = 'text-sm flex justify-between items-center';
+                listItem.innerHTML = `
+                <div>
+                    <span class="font-semibold text-gray-700">${location.name}</span>
+                    <span class="text-gray-500 ml-2">(${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)})</span>
+                </div>
+                <span class="text-blue-600 font-medium">${distance.toFixed(2)} km away</span>
+            `;
+                allLocationsList.appendChild(listItem);
+            });
+
+            allLocationsSection.classList.remove('hidden');
+        }
+
         // --- FUNCTIONS (LOCATION) ---
 
         // Haversine formula to calculate distance
@@ -409,6 +443,7 @@
                             longitude: position.coords.longitude
                         };
                         findNearestRestaurant(userCoords, isAutoDetect);
+                        displayAllLocations(userCoords.latitude, userCoords.longitude);
                     },
                     (error) => {
                         console.error("Error getting location: ", error);
